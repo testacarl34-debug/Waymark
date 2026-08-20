@@ -1,0 +1,12 @@
+{
+  "name": "waymark",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Waymark - shared map journaling with friends",
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "scripts": {
+    "start": "node server.js"
+  }
+}

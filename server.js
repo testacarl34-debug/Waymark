@@ -4,7 +4,7 @@ const path = require('path');
 const crypto = require('crypto');
 const { DatabaseSync } = require('node:sqlite');
 
-const PORT = 12000;
+const PORT = process.env.PORT || 12000;
 const db = new DatabaseSync(path.join(__dirname, 'waymark.db'));
 db.exec(`
 CREATE TABLE IF NOT EXISTS users(id TEXT PRIMARY KEY,username TEXT UNIQUE COLLATE NOCASE,passhash TEXT,salt TEXT,code TEXT UNIQUE,created INTEGER);
