@@ -128,7 +128,7 @@ on('DELETE', '/api/friends/:id', true, async (req, res, u, p) => {
 on('GET', '/api/maps', true, async (req, res, u) => {
   const mine = db.prepare('SELECT * FROM maps WHERE owner_id=?').all(u.id);
   const shared = db.prepare('SELECT m.*,u.username AS ownerName FROM map_members mm JOIN maps m ON m.id=mm.map_id JOIN users u ON u.id=m.owner_id WHERE mm.user_id=? AND m.owner_id!=?').all(u.id, u.id);
-  send(res, 200, { maps: [...mine, ...shared].map(m => ({ id: m.id, name: m.name, personal: !!m.personal, mine: m.owner_id === u.id, ownerName: m.ownerName || null })) });
+  send(res, 200, { maps: [...mine, ...shared].map(m => ({ id: m.id, name: m.name, personal: !!m.personal, mine: m.owner_id === u.id, ownerName: m.ownerName || null, members: m.personal ? 0 : 1 + db.prepare('SELECT COUNT(*) c FROM map_members WHERE map_id=?').get(m.id).c })) });
 });
 
 on('POST', '/api/maps', true, async (req, res, u) => {
@@ -144,7 +144,23 @@ on('GET', '/api/maps/:id', true, async (req, res, u, p) => {
   if (!m) return send(res, 404, { error: 'Map not found' });
   const members = db.prepare('SELECT id,username FROM users WHERE id=? UNION SELECT u.id,u.username FROM map_members mm JOIN users u ON u.id=mm.user_id WHERE mm.map_id=?').all(m.owner_id, m.id);
   const places = db.prepare('SELECT * FROM places WHERE map_id=? ORDER BY created DESC').all(m.id).map(placeWithReviews);
-  send(res, 200, { map: { id: m.id, name: m.name, personal: !!m.personal, mine: m.owner_id === u.id }, members, places });
+  send(res, 200, { map: { id: m.id, name: m.name, personal: !!m.personal, mine: m.owner_id === u.id, ownerId: m.owner_id }, members, places });
+});
+
+on('GET', '/api/maps/:id/leaderboard', true, async (req, res, u, p) => {
+  const m = mapAccess(p.id, u.id);
+  if (!m) return send(res, 404, { error: 'Map not found' });
+  const rows = db.prepare(`
+    SELECT u.id,u.username,
+      (SELECT COUNT(*) FROM places WHERE map_id=? AND created_by=u.id) AS placesAdded,
+      (SELECT COUNT(*) FROM reviews r JOIN places pl ON pl.id=r.place_id WHERE pl.map_id=? AND r.user_id=u.id) AS reviewsWritten
+    FROM users u
+    WHERE u.id=? OR u.id IN (SELECT user_id FROM map_members WHERE map_id=?)
+  `).all(m.id, m.id, m.owner_id, m.id);
+  const board = rows
+    .map(r => ({ ...r, score: r.placesAdded + r.reviewsWritten }))
+    .sort((a, b) => b.score - a.score || b.placesAdded - a.placesAdded || a.username.localeCompare(b.username));
+  send(res, 200, { board });
 });
 
 on('DELETE', '/api/maps/:id', true, async (req, res, u, p) => {
