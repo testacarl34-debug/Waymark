@@ -1,5 +1,6 @@
 waymark.db
 server.log
 node_modules/
+package-lock.json
 .agents_tmp/
 .agent_tmp/

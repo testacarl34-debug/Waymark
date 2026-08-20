@@ -1,43 +1,41 @@
-# Deploy Waymark (free, permanent URL)
+# Deploy Waymark (free, permanent, no data loss)
 
-This project is a zero-dependency Node server (`node server.js`). It works on
-any host that runs Node 22.5+ and gives you a persistent disk for `waymark.db`.
+Stack: **Render** (runs the app, free) + **Turso** (hosts the database, free,
+never wiped, no credit card). The app stores everything in Turso, so it
+survives Render restarts and redeploys.
 
-## What you need first
-1. A **GitHub** account (free) — to hold the code.
-2. A **Render** account (free) at https://render.com — sign up *with GitHub*.
+Your Turso database is already created. You need these two values (keep them secret):
+- `TURSO_DATABASE_URL` = `libsql://waymark-testacarl34-debug.aws-us-east-1.turso.io`
+- `TURSO_AUTH_TOKEN`  = the long database token (from `turso db tokens create waymark`)
 
-## Step 1 — push this code to GitHub
+## One-time: push code to GitHub
 ```bash
-# in this folder
-git remote add origin https://github.com/<YOUR-USERNAME>/waymark.git
-git branch -M main
+git remote add origin https://github.com/<YOU>/Waymark.git
 git push -u origin main
 ```
-(Create the empty `waymark` repo at https://github.com/new first — no README.)
 
-## Step 2 — deploy on Render
-1. Render dashboard → **New +** → **Web Service** → pick your `waymark` repo.
-2. Render auto-detects Node. Confirm:
-   - **Build command:** *(leave empty — no build needed)*
+## Deploy on Render
+1. https://dashboard.render.com → **New +** → **Web Service** → connect the `Waymark` repo.
+2. Settings:
+   - **Build command:** `npm install`
    - **Start command:** `node server.js`
-3. Add a **persistent disk** (keeps your database across deploys):
-   - In the service → **Disks** → **Add Disk**
-   - Name: `waymark-data`, Mount path: `/opt/render/project/src`, Size: 1 GB
-     (the free tier allows one small disk; mounting at the project dir keeps
-     `waymark.db` where the server writes it)
-4. Click **Deploy**. Render builds and gives you a permanent URL like
-   `https://waymark.onrender.com`.
+   - **Instance type:** Free
+3. **Environment variables** (Environment tab → Add):
+   - `TURSO_DATABASE_URL` = `libsql://waymark-testacarl34-debug.aws-us-east-1.turso.io`
+   - `TURSO_AUTH_TOKEN` = *(your database token)*
+4. **Create Web Service.** In ~2 min you get `https://<name>.onrender.com`.
 
-That's it — that URL stays up and survives restarts. Share that one.
+No disk needed — the database lives in Turso, not on Render.
 
 ## Notes
-- Render's free web service sleeps after ~15 min of no traffic; the first visit
-  after idle takes ~30–60s to wake (then it's fast). A $7/mo plan removes this.
-- Environment variables: none required. `PORT` is set by Render automatically.
-- To update the site later: `git push` and Render redeploys automatically.
+- Render free tier sleeps after ~15 min idle; first visit after that takes ~30–60s
+  to wake. Your data is safe in Turso regardless.
+- `npm install` is required now because the app uses `@libsql/client`.
+- To update: `git push`, Render redeploys automatically.
+- If `TURSO_*` env vars are absent, the app falls back to a local `waymark.db`
+  file (fine for local dev, not for hosting).
 
-## Other free hosts (same steps, similar)
-- **Fly.io** — `fly launch` (needs their CLI + a card on file for free tier)
-- **Railway** — connect repo, add a volume; free trial credit
-- **A $5 VPS** (Hetzner/DigitalOcean) — full control, run `start.sh` under systemd
+## Regenerate the database token if needed
+```bash
+turso db tokens create waymark
+```

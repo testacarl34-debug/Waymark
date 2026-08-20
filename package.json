@@ -6,6 +6,9 @@
   "engines": {
     "node": ">=22.5.0"
   },
+  "dependencies": {
+    "@libsql/client": "^0.15.0"
+  },
   "scripts": {
     "start": "node server.js"
   }
